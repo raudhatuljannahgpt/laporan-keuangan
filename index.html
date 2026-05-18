@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Laporan Keuangan – Musholla Raudhatul Jannah</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <style>
+    :root {
+      --g1: #0bc06f;
+      --g2: #036d3c;
+      --gg: linear-gradient(90deg, #0bc06f 0%, #036d3c 100%);
+      --white: #ffffff;
+      --gray-200: #e8e8e8;
+      --gray-400: #949494;
+      --text: #1a1a1a;
+      --shadow: 0 2px 20px rgba(0,0,0,0.09);
+      --r: 20px;
+      --pill: 999px;
+      --font: 'Inter', -apple-system, sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); background: #efefef; color: var(--text); overflow-x: hidden; }
+
+    /* ── STICKY NAVBAR (always on top, green gradient bg) ── */
+    .navbar {
+      position: sticky; top: 0; z-index: 300;
+      background: var(--gg);
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 16px 40px;
+      /* subtle shadow when scrolled – via box-shadow transition */
+      box-shadow: 0 2px 12px rgba(0,0,0,0);
+      transition: box-shadow .2s;
+    }
+    .navbar.scrolled { box-shadow: 0 2px 16px rgba(0,0,0,.22); }
+
+    /* ── HERO (no longer contains navbar, just title + saldo) ── */
+    /* Hero background extends down using padding so cards overlap it */
+    .hero-bg {
+      background: var(--gg);
+      /* extra bottom padding so green shows behind cards */
+      padding-bottom: 100px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .logo-per { height: 38px; width: auto; }
+    .divider  { width: 1.5px; height: 32px; background: rgba(255,255,255,.38); flex-shrink: 0; }
+    .logo-mus { height: 38px; width: auto; }
+    .brand-txt { display: flex; flex-direction: column; margin-left: 2px; }
+    .brand-name { font-size: 17px; font-weight: 800; color: #fff; line-height: 1.25; letter-spacing: -.2px; }
+    .brand-sub  { font-size: 11.5px; font-weight: 400; color: rgba(255,255,255,.78); margin-top: 1px; }
+
+    .nav-r { display: flex; align-items: center; gap: 12px; }
+
+    /* Desktop date – right aligned */
+    .date-d { text-align: right; line-height: 1.55; }
+    .dh { font-size: 12.5px; font-weight: 400; color: rgba(255,255,255,.82); }
+    .dm { font-size: 12.5px; font-weight: 700; color: #fff; }
+
+    /* Menu button */
+    .mb-wrap { position: relative; }
+    .mbtn {
+      width: 38px; height: 38px; border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,.42);
+      background: rgba(255,255,255,.11);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background .17s; flex-shrink: 0;
+    }
+    .mbtn:hover { background: rgba(255,255,255,.22); }
+    .mbtn svg { width: 17px; height: 17px; display: block; }
+
+    /* Dropdown */
+    .dd {
+      position: absolute; top: calc(100% + 10px); right: 0;
+      background: #fff; border-radius: 14px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.17);
+      padding: 7px; min-width: 248px;
+      opacity: 0; transform: translateY(-5px) scale(.97);
+      pointer-events: none; transition: all .17s ease; z-index: 200;
+    }
+    .dd.open { opacity: 1; transform: none; pointer-events: auto; }
+    /* Mobile-only date inside dropdown */
+    .dd-date {
+      display: none; padding: 9px 13px 9px;
+      border-bottom: 1px solid #f0f0f0; margin-bottom: 4px;
+    }
+    .dd-dh { font-size: 12px; color: #666; }
+    .dd-dm { font-size: 13px; font-weight: 700; color: var(--g2); margin-top: 2px; }
+    .dd a {
+      display: flex; align-items: center; gap: 9px;
+      padding: 9px 13px; border-radius: 9px;
+      text-decoration: none; color: var(--text);
+      font-size: 13.5px; font-weight: 600; transition: background .13s;
+    }
+    .dd a:hover { background: #f0faf4; color: var(--g2); }
+    .dd a svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--g1); }
+    /* Tombol Infak Sekarang – green gradient */
+    .dd-infak {
+      display: flex; align-items: center; gap: 9px;
+      padding: 10px 13px; border-radius: 9px;
+      text-decoration: none;
+      background: var(--gg);
+      color: #fff !important;
+      font-size: 13.5px; font-weight: 700;
+      transition: filter .13s; margin-bottom: 4px;
+    }
+    .dd-infak:hover { filter: brightness(1.08); background: var(--gg) !important; }
+    .dd .dd-infak svg { width: 16px; height: 16px; flex-shrink: 0; color: #fff; }
+
+    /* HERO BODY */
+    .hero-body {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; gap: 24px;
+      padding: 24px 90px 46px;
+    }
+    .hero-l { flex: 1 1 auto; }
+    .hero-h1 {
+      font-size: clamp(46px, 5.2vw, 76px);
+      font-weight: 900; color: #fff;
+      line-height: 1.0; letter-spacing: -2.5px;
+    }
+    .hero-sub { font-size: 16px; font-weight: 300; color: rgba(255,255,255,.8); margin-top: 12px; }
+
+    /* Glassmorphism saldo box */
+    .glass {
+      flex: 0 0 auto; width: min(450px, 43vw);
+      background: rgba(255,255,255,.16);
+      backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255,255,255,.27);
+      border-radius: var(--r); padding: 24px 28px; color: #fff;
+    }
+    .glass-label { font-size: 14.5px; font-weight: 400; opacity: .88; margin-bottom: 5px; }
+    .glass-amt   { font-size: clamp(30px, 4vw, 58px); font-weight: 900; letter-spacing: -2px; line-height: 1; margin-bottom: 13px; }
+    .glass-meta  { font-size: 13px; font-weight: 400; color: rgba(255,255,255,.86); line-height: 1.6; }
+    .glass-meta strong { font-weight: 700; }
+
+    /* ── MAIN – pulls up over green bg ── */
+    .main {
+      max-width: 1440px; margin: 0 auto;
+      padding: 0 62px 32px;
+      /* negative margin pulls cards into the green zone */
+      margin-top: -120px;
+      position: relative; z-index: 10;
+    }
+    .stack { display: flex; flex-direction: column; gap: 22px; }
+
+    /* CARD */
+    .card { background: #fff; border-radius: var(--r); box-shadow: var(--shadow); padding: 24px 24px 20px; }
+    .card-h {
+      display: flex; align-items: center;
+      justify-content: space-between; flex-wrap: wrap; gap: 10px;
+      margin-bottom: 14px;
+    }
+    .card-title { font-size: 21px; font-weight: 800; color: var(--g2); letter-spacing: -.4px; }
+
+    /* Controls */
+    .ctrl { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+
+    /* Pill select */
+    .psel {
+      height: 33px; padding: 0 27px 0 13px;
+      border-radius: var(--pill); border: none;
+      font-family: var(--font); font-size: 13px; font-weight: 700; color: #fff;
+      cursor: pointer; outline: none; appearance: none; -webkit-appearance: none;
+      background: #036d3c
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5' viewBox='0 0 9 5'%3E%3Cpath fill='white' d='M0 0l4.5 5L9 0z'/%3E%3C/svg%3E")
+        no-repeat right 9px center / 8px;
+    }
+
+    /* Toggle */
+    .tog { display: flex; background: #e4e4e4; border-radius: var(--pill); padding: 3px; }
+    .tog-btn {
+      height: 27px; padding: 0 12px; border-radius: var(--pill); border: none;
+      font-family: var(--font); font-size: 12.5px; font-weight: 600; color: #555;
+      cursor: pointer; background: transparent; transition: all .16s;
+    }
+    .tog-btn.on { background: #fff; color: var(--g2); box-shadow: 0 1px 4px rgba(0,0,0,.11); }
+
+    /* Search */
+    .srch-w { position: relative; }
+    .srch-w svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 13px; height: 13px; color: var(--gray-400); pointer-events: none; }
+    .srch {
+      height: 33px; padding: 0 11px 0 30px;
+      border: 1.5px solid var(--gray-200); border-radius: var(--pill);
+      font-family: var(--font); font-size: 12px; font-style: italic; color: var(--gray-400);
+      outline: none; width: 225px; transition: border-color .16s;
+    }
+    .srch:focus { border-color: var(--g1); color: var(--text); font-style: normal; }
+    .srch::placeholder { color: var(--gray-400); }
+
+    /* Table */
+    .tbl-wrap { border: 1.5px solid var(--gray-200); border-radius: 13px; overflow: hidden; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead tr { background: #e8f5ee; }
+    thead th { padding: 8px 12px; text-align: left; font-size: 11.5px; font-weight: 700; color: var(--g2); white-space: nowrap; }
+    thead th:last-child { text-align: right; }
+    .tbl-scroll { max-height: 200px; overflow-y: auto; }
+    .tbl-scroll table tbody tr { border-top: 1px solid #f0f0f0; }
+    .tbl-scroll table tbody tr:hover { background: #f7fdf9; }
+    .tbl-scroll table tbody td { padding: 8px 12px; vertical-align: middle; }
+    .tbl-scroll table tbody td:last-child { text-align: right; font-weight: 700; }
+    .cpos { color: var(--g2); } .cneg { color: #dc2626; }
+    .empty td { text-align: center; color: var(--gray-400); padding: 26px; font-style: italic; }
+
+    /* Totals */
+    .tots { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; padding-top: 13px; border-top: 1.5px solid var(--gray-200); }
+    .tot-lbl { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .6px; color: var(--gray-400); margin-bottom: 2px; }
+    .tot-val { font-size: 14px; font-weight: 800; color: var(--text); }
+    .tv-g { color: var(--g2); } .tv-r { color: #dc2626; }
+
+    /* Chart */
+    .chart-wrap { position: relative; height: 275px; }
+
+    /* ── FOOTER TICKER ── */
+    footer {
+      background: #2e2e2b; overflow: hidden; padding: 10px 0; white-space: nowrap;
+    }
+    .tick-track {
+      display: inline-flex;
+      animation: tick 42s linear infinite;
+    }
+    .tick-track span {
+      font-size: 13px; font-style: italic;
+      color: rgba(255,255,255,.74); padding-right: 80px;
+    }
+    @keyframes tick { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .navbar { padding: 11px 13px; }
+      .logo-per, .logo-mus { height: 30px; }
+      .brand-name { font-size: 14px; } .brand-sub { font-size: 10.5px; }
+      .date-d { display: none; }
+      .dd-date { display: block; }
+
+      .hero-bg { padding-bottom: 80px; }
+      .hero-body { flex-direction: column; padding: 18px 23px 38px; gap: 16px; }
+      .hero-h1 { font-size: clamp(38px, 10vw, 54px); }
+      .glass { width: 100%; padding: 16px 16px; }
+      .glass-amt { font-size: clamp(26px, 8.5vw, 42px); }
+
+      .main { padding: 0 10px 26px; margin-top: -90px; }
+      .card { padding: 16px 13px; }
+      .card-title { font-size: 17px; }
+      .srch { width: 100%; } .srch-w { width: 100%; }
+      .col-satuan, .col-harga { display: none; }
+      .tots { grid-template-columns: repeat(2,1fr); }
+    }
+  </style>
+</head>
+<body oncontextmenu="return false">
+
+<!-- ═══════════════════════ STICKY NAVBAR ═══════════════════════ -->
+<nav class="navbar" id="navbar">
+  <div class="brand">
+    <img class="logo-per" src="Assets/logo-perumahan.svg" alt="Grand Permata Tembalang" />
+    <div class="divider"></div>
+    <img class="logo-mus" src="Assets/logo-musholla.svg" alt="Musholla Raudhatul Jannah" />
+    <div class="brand-txt">
+      <span class="brand-name">Musholla Raudhatul Jannah</span>
+      <span class="brand-sub">Perumahan Grand Permata Tembalang</span>
+    </div>
+  </div>
+
+  <div class="nav-r">
+    <!-- Desktop date (right-aligned) -->
+    <div class="date-d">
+      <div class="dh" id="dh"></div>
+      <div class="dm" id="dm"></div>
+    </div>
+
+    <!-- Hamburger -->
+    <div class="mb-wrap">
+      <button class="mbtn" id="mbtn" aria-label="Menu">
+        <svg fill="none" stroke="white" stroke-width="2.2" viewBox="0 0 22 22">
+          <line x1="2" y1="5.5"  x2="20" y2="5.5"/>
+          <line x1="2" y1="11"   x2="20" y2="11"/>
+          <line x1="2" y1="16.5" x2="20" y2="16.5"/>
+        </svg>
+      </button>
+      <div class="dd" id="dd">
+        <!-- Mobile date (left-aligned) -->
+        <div class="dd-date">
+          <div class="dd-dh" id="dd-dh"></div>
+          <div class="dd-dm" id="dd-dm"></div>
+        </div>
+        <!-- Tombol Infak Sekarang -->
+        <a class="dd-infak" href="https://wa.me/6289660304009?text=BTPN%20SYARIAH%20%28547%29%0A1023862413%0AWILDAN%20BACHTIAR" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+          </svg>
+          Infak Sekarang
+        </a>
+        <a href="https://renovasimushollagpt.my.canva.site/" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          Laporan Keuangan Renovasi Musholla
+        </a>
+        <a href="https://raudhatuljannahgpt.github.io/imsakiah/" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8"  y1="2" x2="8"  y2="6"/>
+            <line x1="3"  y1="10" x2="21" y2="10"/>
+          </svg>
+          Jadwal Imsakiah
+        </a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════ HERO BG ═══════════════════════ -->
+<div class="hero-bg">
+  <div class="hero-body">
+    <div class="hero-l">
+      <h1 class="hero-h1">Laporan<br>Keuangan</h1>
+      <p class="hero-sub">Musholla Raudhatul Jannah</p>
+    </div>
+    <div class="glass">
+      <p class="glass-label">Saldo Hari Ini:</p>
+      <p class="glass-amt" id="saldoAmt">Memuat…</p>
+      <div class="glass-meta" id="saldoMeta">–</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ MAIN ═══════════════════════ -->
+<main class="main">
+  <div class="stack">
+
+    <!-- Detail Transaksi -->
+    <div class="card">
+      <div class="card-h">
+        <h2 class="card-title">Detail Transaksi</h2>
+        <div class="srch-w">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input class="srch" id="srch" type="text" placeholder="Cari sumber, keterangan, atau nominal" />
+        </div>
+      </div>
+      <div class="ctrl">
+        <select class="psel" id="tahunSel"></select>
+        <select class="psel" id="bulanSel"></select>
+        <div class="tog">
+          <button class="tog-btn" id="btnP" onclick="setMode('pemasukan')">Pemasukan</button>
+          <button class="tog-btn on" id="btnK" onclick="setMode('pengeluaran')">Pengeluaran</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Tanggal</th><th>Keterangan</th><th>QTY</th>
+              <th class="col-satuan">Satuan</th><th class="col-harga">Harga</th><th>Jumlah</th>
+            </tr>
+          </thead>
+        </table>
+        <div class="tbl-scroll">
+          <table><tbody id="tblBody"><tr class="empty"><td colspan="6">Memuat data…</td></tr></tbody></table>
+        </div>
+      </div>
+      <div class="tots">
+        <div><div class="tot-lbl">Saldo Awal</div><div class="tot-val" id="tSA">–</div></div>
+        <div><div class="tot-lbl">Total Pemasukan</div><div class="tot-val tv-g" id="tP">–</div></div>
+        <div><div class="tot-lbl">Total Pengeluaran</div><div class="tot-val tv-r" id="tK">–</div></div>
+        <div><div class="tot-lbl">Saldo Akhir</div><div class="tot-val" id="tSAk">–</div></div>
+      </div>
+    </div>
+
+    <!-- Tren Tahunan -->
+    <div class="card">
+      <div class="card-h">
+        <h2 class="card-title">Tren Tahunan</h2>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <select class="psel" id="tahunTren"></select>
+          <div class="tog">
+            <button class="tog-btn" id="btnTP" onclick="setTren('pemasukan')">Pemasukan</button>
+            <button class="tog-btn on" id="btnTK" onclick="setTren('pengeluaran')">Pengeluaran</button>
+          </div>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="myChart"></canvas></div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ═══════════════════════ FOOTER TICKER ═══════════════════════ -->
+<footer>
+  <div class="tick-track">
+    <span>Terima kasih banyak untuk infaknya. Semoga berkah bagi jamaah, menjadi amal jariah Bapak dan Ibu semua, dilapangkan rezekinya, dikabulkan segala doa dan hajatnya, diberi kebahagiaan di dunia dan akhirat. آمِيْنَ يَارَبَّ الْعَالَمِيْنَ 🙏</span>
+    <span>Terima kasih banyak untuk infaknya. Semoga berkah bagi jamaah, menjadi amal jariah Bapak dan Ibu semua, dilapangkan rezekinya, dikabulkan segala doa dan hajatnya, diberi kebahagiaan di dunia dan akhirat. آمِيْنَ يَارَبَّ الْعَالَمِيْنَ 🙏</span>
+  </div>
+</footer>
+
+<script>
+/* ════════════════════════════════════════
+   CONFIG
+════════════════════════════════════════ */
+const SHEET_ID = '1Zjk4UNAZi_My_kTvD5QbPO7LS47p6Y_L3ppK_tRyEfc';
+const BULAN    = ['Januari','Februari','Maret','April','Mei','Juni',
+                  'Juli','Agustus','September','Oktober','November','Desember'];
+
+/* ════════════════════════════════════════
+   STATE
+════════════════════════════════════════ */
+let mode = 'pengeluaran', trenMode = 'pengeluaran';
+let summaryAll = {};
+let curYear = '', curMonth = '', curRows = [], chart = null;
+const g = id => document.getElementById(id);
+
+/* ════════════════════════════════════════
+   TANGGAL
+════════════════════════════════════════ */
+function initDates() {
+  const now = new Date();
+  let hijri = '';
+  try {
+    const parts = new Intl.DateTimeFormat('id-u-ca-islamic',
+      { weekday:'long', day:'numeric', month:'long', year:'numeric' })
+      .formatToParts(now);
+    const m = {}; parts.forEach(p => m[p.type] = p.value);
+    hijri = `${m.weekday}, ${m.day} ${m.month} ${m.year} H`;
+  } catch {}
+  const MN = ['Januari','Februari','Maret','April','Mei','Juni',
+               'Juli','Agustus','September','Oktober','November','Desember'];
+  const miladi = `${now.getDate()} ${MN[now.getMonth()]} ${now.getFullYear()} M`;
+  g('dh').textContent   = hijri;  g('dd-dh').textContent = hijri;
+  g('dm').textContent   = miladi; g('dd-dm').textContent = miladi;
+}
+
+/* ════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════ */
+function toN(v) {
+  if (typeof v === 'number') return Math.round(v);
+  if (!v) return 0;
+  // Hapus semua karakter non-angka (titik ribuan, spasi, Rp, dll)
+  return parseInt(String(v).replace(/[^\d]/g, '')) || 0;
+}
+function rp(v) {
+  if (v === null || v === undefined || v === '') return '–';
+  const n = toN(v);
+  if (n === 0 && v !== 0 && v !== '0') return '–';
+  return 'Rp' + n.toLocaleString('id-ID');
+}
+// Ambil nilai sel: bisa berupa angka, string, atau Date
+function cellVal(c) {
+  if (!c || c.v === null || c.v === undefined) return '';
+  return c.v;
+}
+function cellStr(c) {
+  const v = cellVal(c);
+  return v === '' ? '' : String(v).trim();
+}
+
+/* ════════════════════════════════════════
+   FETCH Google Visualization API
+════════════════════════════════════════ */
+async function fetchGviz(sheet) {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`
+              + (sheet ? `&sheet=${encodeURIComponent(sheet)}` : '');
+  const res  = await fetch(url);
+  const text = await res.text();
+  return JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+}
+
+/* ════════════════════════════════════════
+   PARSE TAB TAHUNAN  (mis. "2026")
+   ──────────────────────────────────────
+   Dari JSON asli:
+   - Tidak ada baris header — Google Sheets menyerap judul ke label kolom
+   - Kolom A = nama bulan (string), B = Pemasukan (number), C = Pengeluaran (number)
+   - Saldo Awal & Saldo Akhir: label di A, nilai di B
+   - Data langsung mulai dari baris pertama (mis. "Februari")
+════════════════════════════════════════ */
+function parseSummary(json) {
+  const monthly = {};
+  let saldoAwal = 0, saldoAkhir = 0;
+
+  for (const row of json?.table?.rows || []) {
+    const c    = row.c || [];
+    const aOri = cellStr(c[0]);
+    const aLow = aOri.toLowerCase();
+    const vB   = c[1]?.v ?? null;   // Pemasukan / nilai saldo
+    const vC   = c[2]?.v ?? null;   // Pengeluaran
+
+    if (BULAN.includes(aOri)) {
+      monthly[aOri] = { p: toN(vB), k: toN(vC) };
+    } else if (/saldo\s*awal/i.test(aLow)) {
+      saldoAwal = toN(vB);
+    } else if (/saldo\s*akhir/i.test(aLow)) {
+      saldoAkhir = toN(vB);
+    }
+  }
+  return { monthly, saldoAwal, saldoAkhir };
+}
+
+/* ════════════════════════════════════════
+   PARSE TAB BULANAN  (mis. "MEI 2026")
+   ──────────────────────────────────────
+   Dari JSON asli (kolom index 0-based):
+   Row 0: Tahun / 2026
+   Row 1: PEMASUKAN (col0) / PENGELUARAN (col5)
+   Row 2: sub-header → Tanggal(0) Sumber(1) Keterangan(2) [Jumlah(3)] / Tanggal(5) Keterangan(6) QTY(7) Satuan(8) Harga(9) [Jumlah(10)]
+   Row 3+: data transaksi
+   Row TOTAL: col0="TOTAL" jumlah pemasukan di col3, jumlah pengeluaran di col10
+   Saldo: col2="Saldo Awal/Total.../SALDO", nilai di col3
+
+   Kolom Pemasukan : 0=Tanggal 1=Sumber 2=Keterangan 3=Jumlah
+   Kolom Pengeluaran: 5=Tanggal 6=Keterangan 7=QTY 8=Satuan 9=Harga 10=Jumlah
+════════════════════════════════════════ */
+function parseDetail(json, modeArg) {
+  const rows = [];
+  let saldoAwal = 0, saldoAkhir = 0, totP = 0, totK = 0;
+  const all = json?.table?.rows || [];
+
+  // Indeks kolom tetap sesuai JSON asli
+  const P_TGL=0, P_SRC=1, P_KET=2, P_JML=3;
+  const K_TGL=5, K_KET=6, K_QTY=7, K_SAT=8, K_HRG=9, K_JML=10;
+
+  const getV = (c, idx) => (c[idx]?.v !== null && c[idx]?.v !== undefined) ? c[idx].v : '';
+  const getS = (c, idx) => String(getV(c, idx) || '').trim();
+
+  for (const row of all) {
+    const c = row.c || [];
+
+    // Baris ringkasan keuangan (col2 = label, col3 = nilai)
+    const c2 = cellStr(c[2]).toLowerCase();
+    if (/saldo\s*awal/i.test(c2))        { saldoAwal  = toN(getV(c, P_JML)); continue; }
+    if (/total\s*pemasukan/i.test(c2))   { totP       = toN(getV(c, P_JML)); continue; }
+    if (/total\s*pengeluaran/i.test(c2)) { totK       = toN(getV(c, P_JML)); continue; }
+    if (/^saldo$/i.test(c2))             { saldoAkhir = toN(getV(c, P_JML)); continue; }
+
+    // Baris TOTAL di sisi tabel
+    if (/^total$/i.test(getS(c, P_TGL))) continue;
+    if (/^total$/i.test(getS(c, K_TGL))) continue;
+
+    // Skip baris header & judul
+    const c0 = getS(c, 0).toLowerCase();
+    if (c0 === 'pemasukan' || c0 === 'pengeluaran' || c0 === 'tanggal' ||
+        c0 === 'tahun' || c0 === 'bulan') continue;
+
+    if (modeArg === 'pemasukan') {
+      const tgl = getS(c, P_TGL);
+      const src = getS(c, P_SRC);
+      const ket = getS(c, P_KET);
+      const jml = getV(c, P_JML);
+      if (!tgl && !src && !ket) continue;
+      const ketGabung = [src, ket].filter(Boolean).join(' – ');
+      rows.push({ tgl, ket: ketGabung, qty: '', sat: '', hrg: '', jml });
+    } else {
+      const tgl = getS(c, K_TGL);
+      const ket = getS(c, K_KET);
+      const qty = getS(c, K_QTY);
+      const sat = getS(c, K_SAT);
+      const hrg = getV(c, K_HRG);
+      const jml = getV(c, K_JML);
+      if (!tgl && !ket) continue;
+      rows.push({ tgl, ket, qty, sat, hrg, jml });
+    }
+  }
+
+  return { rows, saldoAwal, saldoAkhir, totP, totK };
+}
+
+/* ════════════════════════════════════════
+   DISCOVER YEARS
+   Tab yang diketahui: 2026, 2025, 2024, 2023
+════════════════════════════════════════ */
+async function discoverYears() {
+  const candidates = ['2026', '2025', '2024', '2023'];
+  const out = {};
+  await Promise.all(candidates.map(async yr => {
+    try {
+      const json = await fetchGviz(yr);
+      const d    = parseSummary(json);
+      if (Object.keys(d.monthly).length > 0) out[yr] = d;
+    } catch {}
+  }));
+  return out;
+}
+
+/* ════════════════════════════════════════
+   BUILD SELECTS
+════════════════════════════════════════ */
+function buildYears(years) {
+  ['tahunSel', 'tahunTren'].forEach(id => {
+    const s = g(id); s.innerHTML = '';
+    [...years].sort((a, b) => b - a).forEach(y => {
+      const o = document.createElement('option');
+      o.value = y; o.textContent = y;
+      if (y === curYear) o.selected = true;
+      s.appendChild(o);
+    });
+  });
+}
+
+function buildMonths(year) {
+  const s      = g('bulanSel');
+  const mData  = summaryAll[year]?.monthly || {};
+  const filled = BULAN.filter(b => mData[b] && (mData[b].p > 0 || mData[b].k > 0));
+  const list   = filled.length ? filled : BULAN;
+  s.innerHTML  = '';
+  list.forEach(m => {
+    const o = document.createElement('option');
+    o.value = m; o.textContent = m;
+    if (m === curMonth) o.selected = true;
+    s.appendChild(o);
+  });
+  if (!list.includes(curMonth)) { curMonth = list[list.length - 1]; s.value = curMonth; }
+}
+
+/* ════════════════════════════════════════
+   RENDER SALDO HERO
+════════════════════════════════════════ */
+function renderSaldo() {
+  const yr = summaryAll[curYear];
+  g('saldoAmt').textContent = yr ? rp(yr.saldoAkhir) : '–';
+  const m = yr?.monthly?.[curMonth] || {};
+  g('saldoMeta').innerHTML =
+    `${curMonth} ${curYear}: Pemasukan <strong>${rp(m.p || 0)}</strong>&nbsp;&nbsp;Pengeluaran <strong>${rp(m.k || 0)}</strong>`;
+}
+
+/* ════════════════════════════════════════
+   RENDER TABLE
+════════════════════════════════════════ */
+function renderTable(q) {
+  const query = (q || '').toLowerCase();
+  const list  = curRows.filter(r =>
+    !query || [r.tgl, r.ket, r.jml, r.sat, r.hrg]
+      .some(v => String(v).toLowerCase().includes(query)));
+  const cls = mode === 'pengeluaran' ? 'cneg' : 'cpos';
+  g('tblBody').innerHTML = list.length
+    ? list.map(r =>
+        `<tr>
+          <td>${r.tgl}</td>
+          <td>${r.ket}</td>
+          <td>${r.qty}</td>
+          <td class="col-satuan">${r.sat}</td>
+          <td class="col-harga">${rp(r.hrg)}</td>
+          <td class="${cls}">${rp(r.jml)}</td>
+        </tr>`).join('')
+    : `<tr class="empty"><td colspan="6">Tidak ada data</td></tr>`;
+}
+
+/* ════════════════════════════════════════
+   RENDER TOTALS
+════════════════════════════════════════ */
+function renderTotals(d) {
+  g('tSA').textContent   = rp(d.saldoAwal);
+  g('tP').textContent    = rp(d.totP);
+  g('tK').textContent    = rp(d.totK);
+  g('tSAk').textContent  = rp(d.saldoAkhir);
+}
+
+/* ════════════════════════════════════════
+   RENDER CHART
+════════════════════════════════════════ */
+function renderChart(year) {
+  const yData = summaryAll[year]?.monthly || {};
+  const vals  = BULAN.map(b => {
+    const d = yData[b] || {};
+    return trenMode === 'pemasukan' ? (d.p || 0) : (d.k || 0);
+  });
+  const ctx = g('myChart').getContext('2d');
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: BULAN.map(b => b.slice(0, 3)),
+      datasets: [{ data: vals, backgroundColor: 'rgba(11,192,111,.78)', borderRadius: 6, borderSkipped: false }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => rp(c.parsed.y) } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 }, color: '#888' } },
+        y: { grid: { color: '#f0f0f0' }, ticks: {
+          font: { family: 'Inter', size: 11 }, color: '#888',
+          callback: v => !v ? 'Rp0' : v >= 1e6
+            ? 'Rp' + (v / 1e6).toFixed(1).replace('.0', '') + 'jt'
+            : v >= 1e3 ? 'Rp' + (v / 1e3).toFixed(0) + 'rb' : 'Rp' + v
+        }}
+      }
+    }
+  });
+}
+
+/* ════════════════════════════════════════
+   LOAD DETAIL TAB BULANAN
+════════════════════════════════════════ */
+async function loadDetail() {
+  g('tblBody').innerHTML = `<tr class="empty"><td colspan="6">Memuat…</td></tr>`;
+  let d = { rows: [], saldoAwal: 0, saldoAkhir: 0, totP: 0, totK: 0 };
+  try {
+    const tabName = `${curMonth.toUpperCase()} ${curYear}`;
+    const json    = await fetchGviz(tabName);
+    d = parseDetail(json, mode);
+  } catch (e) {
+    console.warn('loadDetail error:', e);
+  }
+
+  curRows = d.rows;
+
+  // Fallback dari summary jika detail tidak punya
+  const yr = summaryAll[curYear] || {};
+  if (!d.saldoAwal)  d.saldoAwal  = yr.saldoAwal  || 0;
+  if (!d.saldoAkhir) d.saldoAkhir = yr.saldoAkhir || 0;
+  const m = yr.monthly?.[curMonth] || {};
+  if (!d.totP && m.p) d.totP = m.p;
+  if (!d.totK && m.k) d.totK = m.k;
+
+  renderTable(g('srch').value);
+  renderTotals(d);
+}
+
+/* ════════════════════════════════════════
+   MODE SWITCHERS
+════════════════════════════════════════ */
+function setMode(m) {
+  mode = m;
+  g('btnP').classList.toggle('on', m === 'pemasukan');
+  g('btnK').classList.toggle('on', m === 'pengeluaran');
+  loadDetail();
+}
+function setTren(m) {
+  trenMode = m;
+  g('btnTP').classList.toggle('on', m === 'pemasukan');
+  g('btnTK').classList.toggle('on', m === 'pengeluaran');
+  renderChart(g('tahunTren').value);
+}
+
+/* ════════════════════════════════════════
+   INIT
+════════════════════════════════════════ */
+async function init() {
+  initDates();
+
+  // Sticky navbar shadow
+  const navbar = g('navbar');
+  window.addEventListener('scroll', () => {
+    navbar.classList.toggle('scrolled', window.scrollY > 10);
+  });
+
+  // Dropdown
+  g('mbtn').addEventListener('click', e => { e.stopPropagation(); g('dd').classList.toggle('open'); });
+  document.addEventListener('click', () => g('dd').classList.remove('open'));
+  g('dd').addEventListener('click', e => e.stopPropagation());
+
+  // Search
+  g('srch').addEventListener('input', e => renderTable(e.target.value));
+
+  // Load ringkasan semua tahun
+  summaryAll = await discoverYears();
+  const years = Object.keys(summaryAll).sort();
+  if (!years.length) { g('saldoAmt').textContent = 'Tidak ada data'; return; }
+
+  // Tahun & bulan terakhir yang ada datanya
+  curYear  = years[years.length - 1];
+  const mData  = summaryAll[curYear]?.monthly || {};
+  const filled = BULAN.filter(b => mData[b] && (mData[b].p > 0 || mData[b].k > 0));
+  curMonth = filled.length ? filled[filled.length - 1] : BULAN[new Date().getMonth()];
+
+  buildYears(years);
+  buildMonths(curYear);
+  renderSaldo();
+  renderChart(curYear);
+
+  // Events selector
+  g('tahunSel').addEventListener('change', e => {
+    curYear = e.target.value; buildMonths(curYear); renderSaldo(); loadDetail();
+  });
+  g('bulanSel').addEventListener('change', e => {
+    curMonth = e.target.value; renderSaldo(); loadDetail();
+  });
+  g('tahunTren').addEventListener('change', e => renderChart(e.target.value));
+
+  await loadDetail();
+}
+
+init();
+</script>
+</body>
+</html>
