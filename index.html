@@ -188,24 +188,34 @@
       height: 33px; padding: 0 11px 0 30px;
       border: 1.5px solid var(--gray-200); border-radius: var(--pill);
       font-family: var(--font); font-size: 12px; font-style: italic; color: var(--gray-400);
-      outline: none; width: 225px; transition: border-color .16s;
+      outline: none; width: 270px; transition: border-color .16s;
     }
     .srch:focus { border-color: var(--g1); color: var(--text); font-style: normal; }
     .srch::placeholder { color: var(--gray-400); }
 
     /* Table */
-    .tbl-wrap { border: 1.5px solid var(--gray-200); border-radius: 13px; overflow: hidden; margin-bottom: 14px; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .tbl-outer { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1.5px solid var(--gray-200); border-radius: 13px; margin-bottom: 14px; }
+    .tbl-wrap  { min-width: 570px; width: 100%; }
+    #tblHeader, .tbl-scroll table { width: 100%; min-width: 570px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+    /* Lebar kolom absolut agar konsisten header-body */
+    .col-tgl { width: 95px; }
+    .col-ket { width: auto; }
+    .col-qty { width: 40px; }
+    .col-sat { width: 70px; }
+    .col-hrg { width: 90px; }
+    .col-jml { width: 105px; }
     thead tr { background: #e8f5ee; }
     thead th { padding: 8px 12px; text-align: left; font-size: 11.5px; font-weight: 700; color: var(--g2); white-space: nowrap; }
     thead th:last-child { text-align: right; }
-    .tbl-scroll { max-height: 200px; overflow-y: auto; }
+    .tbl-scroll { max-height: 200px; overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; }
     .tbl-scroll table tbody tr { border-top: 1px solid #f0f0f0; }
     .tbl-scroll table tbody tr:hover { background: #f7fdf9; }
-    .tbl-scroll table tbody td { padding: 8px 12px; vertical-align: middle; }
+    .tbl-scroll table tbody td { padding: 8px 12px; vertical-align: middle; white-space: nowrap; }
+    .tbl-scroll table tbody td:nth-child(2) { white-space: normal; overflow-wrap: anywhere; line-height: 1.25; }
     .tbl-scroll table tbody td:last-child { text-align: right; font-weight: 700; }
     .cpos { color: var(--g2); } .cneg { color: #dc2626; }
-    .empty td { text-align: center; color: var(--gray-400); padding: 26px; font-style: italic; }
+    .empty td { text-align: left !important; color: var(--gray-400); padding: 26px; font-style: italic; white-space: normal; }
 
     /* Totals */
     .tots { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; padding-top: 13px; border-top: 1.5px solid var(--gray-200); }
@@ -248,7 +258,6 @@
       .card { padding: 16px 13px; }
       .card-title { font-size: 17px; }
       .srch { width: 100%; } .srch-w { width: 100%; }
-      .col-satuan, .col-harga { display: none; }
       .tots { grid-template-columns: repeat(2,1fr); }
     }
   </style>
@@ -355,17 +364,29 @@
           <button class="tog-btn on" id="btnK" onclick="setMode('pengeluaran')">Pengeluaran</button>
         </div>
       </div>
-      <div class="tbl-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Tanggal</th><th>Keterangan</th><th>QTY</th>
-              <th class="col-satuan">Satuan</th><th class="col-harga">Harga</th><th>Jumlah</th>
-            </tr>
-          </thead>
-        </table>
-        <div class="tbl-scroll">
-          <table><tbody id="tblBody"><tr class="empty"><td colspan="6">Memuat data…</td></tr></tbody></table>
+      <div class="tbl-outer">
+        <div class="tbl-wrap">
+          <table id="tblHeader">
+            <colgroup>
+              <col class="col-tgl"><col class="col-ket"><col class="col-qty">
+              <col class="col-sat"><col class="col-hrg"><col class="col-jml">
+            </colgroup>
+            <thead id="tblHead">
+              <tr>
+                <th>Tanggal</th><th>Keterangan</th><th>QTY</th>
+                <th>Satuan</th><th>Harga</th><th>Jumlah</th>
+              </tr>
+            </thead>
+          </table>
+          <div class="tbl-scroll">
+            <table>
+              <colgroup>
+                <col class="col-tgl"><col class="col-ket"><col class="col-qty">
+                <col class="col-sat"><col class="col-hrg"><col class="col-jml">
+              </colgroup>
+              <tbody id="tblBody"><tr class="empty"><td colspan="6">Memuat data…</td></tr></tbody>
+            </table>
+          </div>
         </div>
       </div>
       <div class="tots">
@@ -379,7 +400,7 @@
     <!-- Tren Tahunan -->
     <div class="card">
       <div class="card-h">
-        <h2 class="card-title">Tren Tahunan</h2>
+        <h2 class="card-title">Rekap Tahunan</h2>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <select class="psel" id="tahunTren"></select>
           <div class="tog">
@@ -415,6 +436,8 @@ const BULAN    = ['Januari','Februari','Maret','April','Mei','Juni',
 ════════════════════════════════════════ */
 let mode = 'pengeluaran', trenMode = 'pengeluaran';
 let summaryAll = {};
+// latestYear & latestMonth: selalu menunjuk data terbaru, tidak berubah saat user ganti filter
+let latestYear = '', latestMonth = '';
 let curYear = '', curMonth = '', curRows = [], chart = null;
 const g = id => document.getElementById(id);
 
@@ -444,7 +467,6 @@ function initDates() {
 function toN(v) {
   if (typeof v === 'number') return Math.round(v);
   if (!v) return 0;
-  // Hapus semua karakter non-angka (titik ribuan, spasi, Rp, dll)
   return parseInt(String(v).replace(/[^\d]/g, '')) || 0;
 }
 function rp(v) {
@@ -453,18 +475,47 @@ function rp(v) {
   if (n === 0 && v !== 0 && v !== '0') return '–';
   return 'Rp' + n.toLocaleString('id-ID');
 }
-// Ambil nilai sel: bisa berupa angka, string, atau Date
-function cellVal(c) {
-  if (!c || c.v === null || c.v === undefined) return '';
-  return c.v;
-}
 function cellStr(c) {
-  const v = cellVal(c);
-  return v === '' ? '' : String(v).trim();
+  if (!c || c.v === null || c.v === undefined) return '';
+  return String(c.v).trim();
+}
+
+/* ── Format tanggal: tangani "Date(2026,1,10)" dari Google Sheets ── */
+function formatTgl(val) {
+  if (!val) return '';
+  const s = String(val);
+  // Format Date(yyyy,m,d) — bulan di GSheets 0-based
+  const dm = s.match(/^Date\((\d{4}),(\d+),(\d+)\)$/);
+  if (dm) {
+    const y = dm[1];
+    const m = String(parseInt(dm[2]) + 1).padStart(2, '0');
+    const d = String(dm[3]).padStart(2, '0');
+    return `${d}/${m}/${y}`;
+  }
+  return s;
+}
+
+/* ── Kata-kata yang menandakan baris bukan data transaksi ── */
+const SKIP_WORDS = new Set([
+  'pemasukan','pengeluaran','tanggal','sumber','keterangan',
+  'qty','satuan','harga','jumlah','total','informasi','laporan',
+  'musala','musholla','perumahan','bulan','tahun','saldo'
+]);
+function isHeaderRow(cells) {
+  // Jika mayoritas sel non-kosong berisi kata header → skip
+  const nonEmpty = cells.filter(c => cellStr(c) !== '');
+  if (!nonEmpty.length) return true;
+  const headerCount = nonEmpty.filter(c => SKIP_WORDS.has(cellStr(c).toLowerCase())).length;
+  return headerCount / nonEmpty.length >= 0.5;
+}
+function isYearRow(cells) {
+  // Baris yang isinya cuma angka tahun 4 digit
+  const vals = cells.map(c => cellStr(c)).filter(Boolean);
+  return vals.length === 1 && /^\d{4}$/.test(vals[0]);
 }
 
 /* ════════════════════════════════════════
-   FETCH Google Visualization API
+   FETCH
 ════════════════════════════════════════ */
 async function fetchGviz(sheet) {
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`
@@ -475,56 +526,37 @@ async function fetchGviz(sheet) {
 }
 
 /* ════════════════════════════════════════
-   PARSE TAB TAHUNAN  (mis. "2026")
-   ──────────────────────────────────────
-   Dari JSON asli:
-   - Tidak ada baris header — Google Sheets menyerap judul ke label kolom
-   - Kolom A = nama bulan (string), B = Pemasukan (number), C = Pengeluaran (number)
-   - Saldo Awal & Saldo Akhir: label di A, nilai di B
-   - Data langsung mulai dari baris pertama (mis. "Februari")
+   PARSE TAB TAHUNAN (mis. "2026")
+   Kolom: A=nama bulan, B=Pemasukan, C=Pengeluaran
+   Saldo Awal/Akhir: label di A, nilai di B
 ════════════════════════════════════════ */
 function parseSummary(json) {
   const monthly = {};
   let saldoAwal = 0, saldoAkhir = 0;
-
   for (const row of json?.table?.rows || []) {
     const c    = row.c || [];
     const aOri = cellStr(c[0]);
     const aLow = aOri.toLowerCase();
-    const vB   = c[1]?.v ?? null;   // Pemasukan / nilai saldo
-    const vC   = c[2]?.v ?? null;   // Pengeluaran
-
-    if (BULAN.includes(aOri)) {
-      monthly[aOri] = { p: toN(vB), k: toN(vC) };
-    } else if (/saldo\s*awal/i.test(aLow)) {
-      saldoAwal = toN(vB);
-    } else if (/saldo\s*akhir/i.test(aLow)) {
-      saldoAkhir = toN(vB);
-    }
+    const vB   = c[1]?.v ?? null;
+    const vC   = c[2]?.v ?? null;
+    if (BULAN.includes(aOri))            monthly[aOri] = { p: toN(vB), k: toN(vC) };
+    else if (/saldo\s*awal/i.test(aLow))  saldoAwal    = toN(vB);
+    else if (/saldo\s*akhir/i.test(aLow)) saldoAkhir   = toN(vB);
   }
   return { monthly, saldoAwal, saldoAkhir };
 }
 
 /* ════════════════════════════════════════
-   PARSE TAB BULANAN  (mis. "MEI 2026")
-   ──────────────────────────────────────
-   Dari JSON asli (kolom index 0-based):
-   Row 0: Tahun / 2026
-   Row 1: PEMASUKAN (col0) / PENGELUARAN (col5)
-   Row 2: sub-header → Tanggal(0) Sumber(1) Keterangan(2) [Jumlah(3)] / Tanggal(5) Keterangan(6) QTY(7) Satuan(8) Harga(9) [Jumlah(10)]
-   Row 3+: data transaksi
-   Row TOTAL: col0="TOTAL" jumlah pemasukan di col3, jumlah pengeluaran di col10
-   Saldo: col2="Saldo Awal/Total.../SALDO", nilai di col3
-
-   Kolom Pemasukan : 0=Tanggal 1=Sumber 2=Keterangan 3=Jumlah
-   Kolom Pengeluaran: 5=Tanggal 6=Keterangan 7=QTY 8=Satuan 9=Harga 10=Jumlah
+   PARSE TAB BULANAN (mis. "MEI 2026")
+   Kolom Pemasukan : 0=Tgl 1=Sumber 2=Keterangan 3=Jumlah
+   Kolom Pengeluaran: 5=Tgl 6=Keterangan 7=QTY 8=Satuan 9=Harga 10=Jumlah
+   Ringkasan (col2=label, col3=nilai): Saldo Awal, Total Pemasukan, Total Pengeluaran, SALDO
 ════════════════════════════════════════ */
 function parseDetail(json, modeArg) {
   const rows = [];
   let saldoAwal = 0, saldoAkhir = 0, totP = 0, totK = 0;
   const all = json?.table?.rows || [];
 
-  // Indeks kolom tetap sesuai JSON asli
   const P_TGL=0, P_SRC=1, P_KET=2, P_JML=3;
   const K_TGL=5, K_KET=6, K_QTY=7, K_SAT=8, K_HRG=9, K_JML=10;
 
@@ -532,34 +564,29 @@ function parseDetail(json, modeArg) {
   const getS = (c, idx) => String(getV(c, idx) || '').trim();
 
   for (const row of all) {
-    const c = row.c || [];
+    const c   = row.c || [];
+    const c2  = cellStr(c[2]).toLowerCase();
 
-    // Baris ringkasan keuangan (col2 = label, col3 = nilai)
-    const c2 = cellStr(c[2]).toLowerCase();
+    // Baris ringkasan keuangan (col2=label, col3=nilai)
     if (/saldo\s*awal/i.test(c2))        { saldoAwal  = toN(getV(c, P_JML)); continue; }
     if (/total\s*pemasukan/i.test(c2))   { totP       = toN(getV(c, P_JML)); continue; }
     if (/total\s*pengeluaran/i.test(c2)) { totK       = toN(getV(c, P_JML)); continue; }
     if (/^saldo$/i.test(c2))             { saldoAkhir = toN(getV(c, P_JML)); continue; }
 
-    // Baris TOTAL di sisi tabel
+    // Skip baris header/judul/total/kosong
+    if (isHeaderRow(c) || isYearRow(c))  continue;
     if (/^total$/i.test(getS(c, P_TGL))) continue;
     if (/^total$/i.test(getS(c, K_TGL))) continue;
 
-    // Skip baris header & judul
-    const c0 = getS(c, 0).toLowerCase();
-    if (c0 === 'pemasukan' || c0 === 'pengeluaran' || c0 === 'tanggal' ||
-        c0 === 'tahun' || c0 === 'bulan') continue;
-
     if (modeArg === 'pemasukan') {
-      const tgl = getS(c, P_TGL);
+      const tgl = formatTgl(getV(c, P_TGL));
       const src = getS(c, P_SRC);
       const ket = getS(c, P_KET);
       const jml = getV(c, P_JML);
       if (!tgl && !src && !ket) continue;
-      const ketGabung = [src, ket].filter(Boolean).join(' – ');
-      rows.push({ tgl, ket: ketGabung, qty: '', sat: '', hrg: '', jml });
+      rows.push({ tgl, ket: [src, ket].filter(Boolean).join(' – '), qty: '', sat: '', hrg: '', jml });
     } else {
-      const tgl = getS(c, K_TGL);
+      const tgl = formatTgl(getV(c, K_TGL));
       const ket = getS(c, K_KET);
       const qty = getS(c, K_QTY);
       const sat = getS(c, K_SAT);
@@ -569,13 +596,11 @@ function parseDetail(json, modeArg) {
       rows.push({ tgl, ket, qty, sat, hrg, jml });
     }
   }
-
   return { rows, saldoAwal, saldoAkhir, totP, totK };
 }
 
 /* ════════════════════════════════════════
    DISCOVER YEARS
-   Tab yang diketahui: 2026, 2025, 2024, 2023
 ════════════════════════════════════════ */
 async function discoverYears() {
   const candidates = ['2026', '2025', '2024', '2023'];
@@ -622,17 +647,42 @@ function buildMonths(year) {
 
 /* ════════════════════════════════════════
    RENDER SALDO HERO
+   — selalu pakai latestYear & latestMonth, tidak ikut filter user
 ════════════════════════════════════════ */
 function renderSaldo() {
-  const yr = summaryAll[curYear];
+  const yr = summaryAll[latestYear];
   g('saldoAmt').textContent = yr ? rp(yr.saldoAkhir) : '–';
-  const m = yr?.monthly?.[curMonth] || {};
+  const m = yr?.monthly?.[latestMonth] || {};
   g('saldoMeta').innerHTML =
-    `${curMonth} ${curYear}: Pemasukan <strong>${rp(m.p || 0)}</strong>&nbsp;&nbsp;Pengeluaran <strong>${rp(m.k || 0)}</strong>`;
+    `${latestMonth} ${latestYear}: Pemasukan <strong>${rp(m.p || 0)}</strong>&nbsp;&nbsp;Pengeluaran <strong>${rp(m.k || 0)}</strong>`;
 }
 
 /* ════════════════════════════════════════
-   RENDER TABLE
+   RENDER TABLE HEADER (dinamis)
+════════════════════════════════════════ */
+function renderHeader() {
+  const head = g('tblHead');
+  if (mode === 'pemasukan') {
+    head.innerHTML = `<tr>
+      <th class="col-tgl">Tanggal</th>
+      <th class="col-ket" colspan="3">Keterangan</th>
+      <th class="col-hrg"></th>
+      <th class="col-jml">Jumlah</th>
+    </tr>`;
+  } else {
+    head.innerHTML = `<tr>
+      <th class="col-tgl">Tanggal</th>
+      <th class="col-ket">Keterangan</th>
+      <th class="col-qty">QTY</th>
+      <th class="col-sat col-satuan">Satuan</th>
+      <th class="col-hrg col-harga">Harga</th>
+      <th class="col-jml">Jumlah</th>
+    </tr>`;
+  }
+}
+
+/* ════════════════════════════════════════
+   RENDER TABLE BODY
 ════════════════════════════════════════ */
 function renderTable(q) {
   const query = (q || '').toLowerCase();
@@ -640,17 +690,31 @@ function renderTable(q) {
     !query || [r.tgl, r.ket, r.jml, r.sat, r.hrg]
       .some(v => String(v).toLowerCase().includes(query)));
   const cls = mode === 'pengeluaran' ? 'cneg' : 'cpos';
-  g('tblBody').innerHTML = list.length
-    ? list.map(r =>
-        `<tr>
-          <td>${r.tgl}</td>
-          <td>${r.ket}</td>
-          <td>${r.qty}</td>
-          <td class="col-satuan">${r.sat}</td>
-          <td class="col-harga">${rp(r.hrg)}</td>
-          <td class="${cls}">${rp(r.jml)}</td>
-        </tr>`).join('')
-    : `<tr class="empty"><td colspan="6">Tidak ada data</td></tr>`;
+
+  if (!list.length) {
+    g('tblBody').innerHTML = `<tr class="empty"><td colspan="6">Tidak ada data</td></tr>`;
+    return;
+  }
+
+  if (mode === 'pemasukan') {
+    g('tblBody').innerHTML = list.map(r =>
+      `<tr>
+        <td>${r.tgl}</td>
+        <td colspan="3">${r.ket}</td>
+        <td></td>
+        <td class="${cls}">${rp(r.jml)}</td>
+      </tr>`).join('');
+  } else {
+    g('tblBody').innerHTML = list.map(r =>
+      `<tr>
+        <td>${r.tgl}</td>
+        <td>${r.ket}</td>
+        <td>${r.qty}</td>
+        <td class="col-satuan">${r.sat}</td>
+        <td class="col-harga">${rp(r.hrg)}</td>
+        <td class="${cls}">${rp(r.jml)}</td>
+      </tr>`).join('');
+  }
 }
 
 /* ════════════════════════════════════════
@@ -697,29 +761,26 @@ function renderChart(year) {
 }
 
 /* ════════════════════════════════════════
-   LOAD DETAIL TAB BULANAN
+   LOAD DETAIL
 ════════════════════════════════════════ */
 async function loadDetail() {
   g('tblBody').innerHTML = `<tr class="empty"><td colspan="6">Memuat…</td></tr>`;
+  renderHeader();
   let d = { rows: [], saldoAwal: 0, saldoAkhir: 0, totP: 0, totK: 0 };
   try {
-    const tabName = `${curMonth.toUpperCase()} ${curYear}`;
-    const json    = await fetchGviz(tabName);
+    const json = await fetchGviz(`${curMonth.toUpperCase()} ${curYear}`);
     d = parseDetail(json, mode);
   } catch (e) {
     console.warn('loadDetail error:', e);
   }
-
   curRows = d.rows;
-
-  // Fallback dari summary jika detail tidak punya
+  // Fallback dari summary
   const yr = summaryAll[curYear] || {};
   if (!d.saldoAwal)  d.saldoAwal  = yr.saldoAwal  || 0;
   if (!d.saldoAkhir) d.saldoAkhir = yr.saldoAkhir || 0;
   const m = yr.monthly?.[curMonth] || {};
   if (!d.totP && m.p) d.totP = m.p;
   if (!d.totK && m.k) d.totK = m.k;
-
   renderTable(g('srch').value);
   renderTotals(d);
 }
@@ -765,23 +826,28 @@ async function init() {
   const years = Object.keys(summaryAll).sort();
   if (!years.length) { g('saldoAmt').textContent = 'Tidak ada data'; return; }
 
-  // Tahun & bulan terakhir yang ada datanya
-  curYear  = years[years.length - 1];
-  const mData  = summaryAll[curYear]?.monthly || {};
+  // Tentukan tahun & bulan terbaru yang ada data → simpan di latestYear/latestMonth
+  latestYear = years[years.length - 1];
+  const mData  = summaryAll[latestYear]?.monthly || {};
   const filled = BULAN.filter(b => mData[b] && (mData[b].p > 0 || mData[b].k > 0));
-  curMonth = filled.length ? filled[filled.length - 1] : BULAN[new Date().getMonth()];
+  latestMonth  = filled.length ? filled[filled.length - 1] : BULAN[new Date().getMonth()];
+
+  // curYear & curMonth awalnya = latest, tapi bisa berubah oleh user
+  curYear  = latestYear;
+  curMonth = latestMonth;
 
   buildYears(years);
   buildMonths(curYear);
-  renderSaldo();
+  renderSaldo();   // pakai latestYear/latestMonth, tidak akan berubah
   renderChart(curYear);
 
-  // Events selector
   g('tahunSel').addEventListener('change', e => {
-    curYear = e.target.value; buildMonths(curYear); renderSaldo(); loadDetail();
+    curYear = e.target.value; buildMonths(curYear); loadDetail();
+    // Saldo hero TIDAK ikut berubah
   });
   g('bulanSel').addEventListener('change', e => {
-    curMonth = e.target.value; renderSaldo(); loadDetail();
+    curMonth = e.target.value; loadDetail();
+    // Saldo hero TIDAK ikut berubah
   });
   g('tahunTren').addEventListener('change', e => renderChart(e.target.value));
 
