@@ -48,6 +48,8 @@
       padding-bottom: 100px;
     }
     .brand { display: flex; align-items: center; gap: 10px; }
+    .brand a { text-decoration: none; }
+    .logo-home { display: inline-flex; align-items: center; flex-shrink: 0; }
     .logo-per { height: 38px; width: auto; }
     .divider  { width: 1.5px; height: 32px; background: rgba(255,255,255,.38); flex-shrink: 0; }
     .logo-mus { height: 38px; width: auto; }
@@ -72,7 +74,13 @@
       transition: background .17s; flex-shrink: 0;
     }
     .mbtn:hover { background: rgba(255,255,255,.22); }
-    .mbtn svg { width: 17px; height: 17px; display: block; }
+    .mbtn svg {
+      width: 17px; height: 17px; display: block;
+      transform-origin: center;
+      transition: transform .22s ease;
+    }
+    .mbtn:hover svg,
+    .mbtn.open svg { transform: rotate(90deg); }
 
     /* Dropdown */
     .dd {
@@ -267,12 +275,16 @@
 <!-- ═══════════════════════ STICKY NAVBAR ═══════════════════════ -->
 <nav class="navbar" id="navbar">
   <div class="brand">
-    <img class="logo-per" src="Assets/logo-perumahan.svg" alt="Grand Permata Tembalang" />
+    <a class="logo-home" href="./" aria-label="Muat ulang halaman">
+      <img class="logo-per" src="Assets/logo-perumahan.svg" alt="Grand Permata Tembalang" />
+    </a>
     <div class="divider"></div>
-    <img class="logo-mus" src="Assets/logo-musholla.svg" alt="Musholla Raudhatul Jannah" />
+    <a class="logo-home" href="./" aria-label="Muat ulang halaman">
+      <img class="logo-mus" src="Assets/logo-musholla.svg" alt="Musholla Raudhatul Jannah" />
+    </a>
     <div class="brand-txt">
-      <span class="brand-name">Musholla Raudhatul Jannah</span>
-      <span class="brand-sub">Perumahan Grand Permata Tembalang</span>
+      <a class="brand-name" href="./">Musholla Raudhatul Jannah</a>
+      <a class="brand-sub" href="https://maps.app.goo.gl/7QFZ1CJjUiJLDudq9?g_st=ic" target="_blank" rel="noopener noreferrer">Perumahan Grand Permata Tembalang</a>
     </div>
   </div>
 
@@ -285,7 +297,7 @@
 
     <!-- Hamburger -->
     <div class="mb-wrap">
-      <button class="mbtn" id="mbtn" aria-label="Menu">
+      <button class="mbtn" id="mbtn" aria-label="Menu" aria-expanded="false" aria-controls="dd">
         <svg fill="none" stroke="white" stroke-width="2.2" viewBox="0 0 22 22">
           <line x1="2" y1="5.5"  x2="20" y2="5.5"/>
           <line x1="2" y1="11"   x2="20" y2="11"/>
@@ -814,9 +826,22 @@ async function init() {
   });
 
   // Dropdown
-  g('mbtn').addEventListener('click', e => { e.stopPropagation(); g('dd').classList.toggle('open'); });
-  document.addEventListener('click', () => g('dd').classList.remove('open'));
-  g('dd').addEventListener('click', e => e.stopPropagation());
+  const menuBtn = g('mbtn');
+  const dropdown = g('dd');
+  function closeMenu() {
+    dropdown.classList.remove('open');
+    menuBtn.classList.remove('open');
+    menuBtn.setAttribute('aria-expanded', 'false');
+  }
+  menuBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const isOpen = dropdown.classList.toggle('open');
+    menuBtn.classList.toggle('open', isOpen);
+    menuBtn.setAttribute('aria-expanded', String(isOpen));
+  });
+  document.addEventListener('click', closeMenu);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+  dropdown.addEventListener('click', e => e.stopPropagation());
 
   // Search
   g('srch').addEventListener('input', e => renderTable(e.target.value));
